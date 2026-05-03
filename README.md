@@ -110,7 +110,8 @@ pm2 save
 | `NODE_ENV` | No | `development` or `production` |
 | `GEMINI_API_KEY` | **Yes** | Google Gemini API key |
 | `FIREBASE_SERVICE_ACCOUNT` | **Yes** | Firebase service account JSON |
-| `ALLOWED_ORIGINS` | No | Comma-separated CORS origins |
+| `FRONTEND_URL` | No | Primary frontend origin allowed by CORS |
+| `ALLOWED_ORIGINS` | No | Comma-separated additional CORS origins |
 
 ---
 
@@ -125,6 +126,7 @@ pm2 save
 - Either set `FIREBASE_SERVICE_ACCOUNT` env var or `GOOGLE_APPLICATION_CREDENTIALS`
 
 ### CORS errors
+- Set `FRONTEND_URL` to your deployed frontend origin
 - Check that frontend URL is in `ALLOWED_ORIGINS`
 - Default allowed: `localhost:5173`, `localhost:3000`, `localhost:5000`
 
