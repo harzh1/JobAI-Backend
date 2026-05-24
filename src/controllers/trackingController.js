@@ -12,10 +12,11 @@ export const trackOpenController = async (req, res) => {
       if (doc.exists) {
         const campaign = doc.data();
         const recipientStatus = campaign.recipientStatus || {};
+        const safeEmailKey = email.replace(/\./g, ',');
         
         // Only mark as opened if it hasn't been marked as Opened or Replied yet
-        if (recipientStatus[email]?.status !== 'Opened' && recipientStatus[email]?.status !== 'Replied') {
-          recipientStatus[email] = {
+        if (recipientStatus[safeEmailKey]?.status !== 'Opened' && recipientStatus[safeEmailKey]?.status !== 'Replied') {
+          recipientStatus[safeEmailKey] = {
             status: 'Opened',
             time: new Date().toISOString()
           };
