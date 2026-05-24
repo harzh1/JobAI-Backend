@@ -57,6 +57,45 @@ export const getCampaignsController = async (req, res) => {
   }
 };
 
+export const updateCampaignController = async (req, res) => {
+  try {
+    if (!req.user || !req.user.uid) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const userId = req.user.uid;
+    const { campaignId } = req.params;
+    const updateData = req.body;
+
+    const campaignRef = db.collection('users').doc(userId).collection('campaigns').doc(campaignId);
+    const doc = await campaignRef.get();
+
+    if (!doc.exists) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+
+    const updates = {
+      ...updateData,
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (updateData.history !== undefined) {
+      updates.history = updateData.history;
+    } else {
+      updates.history = FieldValue.arrayUnion({ action: 'Campaign Updated', timestamp: new Date().toISOString() });
+    }
+
+    // Remove id from updates if it was mistakenly included
+    delete updates.id;
+
+    await campaignRef.update(updates);
+    
+    res.status(200).json({ success: true, id: campaignId, ...updates });
+  } catch (error) {
+    console.error('[Campaign] Update error:', error);
+    res.status(500).json({ error: 'Failed to update campaign', details: error.message });
+  }
+};
+
 export const getCampaignController = async (req, res) => {
   try {
     if (!req.user || !req.user.uid) {

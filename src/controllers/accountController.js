@@ -75,6 +75,35 @@ export const deleteAccountController = async (req, res) => {
   }
 };
 
+export const updateAccountController = async (req, res) => {
+  try {
+    if (!req.user || !req.user.uid) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const userId = req.user.uid;
+    const { accountId } = req.params;
+    const updates = req.body;
+
+    const accountRef = db.collection('users').doc(userId).collection('accounts').doc(accountId);
+    
+    // Validate account exists
+    const doc = await accountRef.get();
+    if (!doc.exists) {
+      return res.status(404).json({ error: 'Account not found' });
+    }
+
+    await accountRef.update({
+      ...updates,
+      updatedAt: new Date().toISOString()
+    });
+
+    res.status(200).json({ success: true, id: accountId, ...updates });
+  } catch (error) {
+    console.error('[Account] Update error:', error);
+    res.status(500).json({ error: 'Failed to update account', details: error.message });
+  }
+};
+
 export const googleAuthUrlController = async (req, res) => {
   try {
     const userId = req.user.uid;

@@ -23,6 +23,7 @@ import {
   googleAuthCallbackController,
   microsoftAuthUrlController,
   microsoftAuthCallbackController,
+  updateAccountController,
 } from "../controllers/accountController.js";
 import {
   createTemplateController,
@@ -37,6 +38,7 @@ import {
   updateCampaignStatusController,
   deleteCampaignController,
   resendCampaignController,
+  updateCampaignController,
 } from "../controllers/campaignController.js";
 import { trackOpenController } from "../controllers/trackingController.js";
 
@@ -88,6 +90,7 @@ router.delete("/resumes/:resumeId", authenticateToken, deleteResumeController);
 // Accounts
 router.post("/accounts", authenticateToken, connectAccountController);
 router.get("/accounts", authenticateToken, getAccountsController);
+router.put("/accounts/:accountId", authenticateToken, updateAccountController);
 router.delete("/accounts/:accountId", authenticateToken, deleteAccountController);
 router.get("/accounts/google/auth", authenticateToken, googleAuthUrlController);
 router.get("/accounts/google/callback", googleAuthCallbackController);
@@ -104,6 +107,7 @@ router.delete("/templates/:templateId", authenticateToken, deleteTemplateControl
 router.post("/campaigns", authenticateToken, createCampaignController);
 router.get("/campaigns", authenticateToken, getCampaignsController);
 router.get("/campaigns/:id", authenticateToken, getCampaignController);
+router.put("/campaigns/:campaignId", authenticateToken, updateCampaignController);
 router.put("/campaigns/:campaignId/status", authenticateToken, updateCampaignStatusController);
 router.post("/campaigns/:campaignId/resend", authenticateToken, resendCampaignController);
 router.delete("/campaigns/:campaignId", authenticateToken, deleteCampaignController);
