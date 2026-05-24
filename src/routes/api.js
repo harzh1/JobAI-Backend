@@ -15,6 +15,23 @@ import {
   getUserResumesController,
   deleteResumeController,
 } from "../controllers/resumeController.js";
+import {
+  connectAccountController,
+  getAccountsController,
+  deleteAccountController,
+} from "../controllers/accountController.js";
+import {
+  createTemplateController,
+  getTemplatesController,
+  updateTemplateController,
+  deleteTemplateController,
+} from "../controllers/templateController.js";
+import {
+  createCampaignController,
+  getCampaignsController,
+  updateCampaignStatusController,
+  deleteCampaignController,
+} from "../controllers/campaignController.js";
 
 const router = express.Router();
 
@@ -57,5 +74,25 @@ router.get("/resumes", authenticateToken, getUserResumesController);
 
 // DELETE /api/resumes/:resumeId - Delete a resume
 router.delete("/resumes/:resumeId", authenticateToken, deleteResumeController);
+
+/**
+ * Campaigns, Templates & Accounts routes
+ */
+// Accounts
+router.post("/accounts", authenticateToken, connectAccountController);
+router.get("/accounts", authenticateToken, getAccountsController);
+router.delete("/accounts/:accountId", authenticateToken, deleteAccountController);
+
+// Templates
+router.post("/templates", authenticateToken, createTemplateController);
+router.get("/templates", authenticateToken, getTemplatesController);
+router.put("/templates/:templateId", authenticateToken, updateTemplateController);
+router.delete("/templates/:templateId", authenticateToken, deleteTemplateController);
+
+// Campaigns
+router.post("/campaigns", authenticateToken, createCampaignController);
+router.get("/campaigns", authenticateToken, getCampaignsController);
+router.put("/campaigns/:campaignId/status", authenticateToken, updateCampaignStatusController);
+router.delete("/campaigns/:campaignId", authenticateToken, deleteCampaignController);
 
 export default router;
