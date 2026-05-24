@@ -19,6 +19,10 @@ import {
   connectAccountController,
   getAccountsController,
   deleteAccountController,
+  googleAuthUrlController,
+  googleAuthCallbackController,
+  microsoftAuthUrlController,
+  microsoftAuthCallbackController,
 } from "../controllers/accountController.js";
 import {
   createTemplateController,
@@ -29,9 +33,12 @@ import {
 import {
   createCampaignController,
   getCampaignsController,
+  getCampaignController,
   updateCampaignStatusController,
   deleteCampaignController,
+  resendCampaignController,
 } from "../controllers/campaignController.js";
+import { trackOpenController } from "../controllers/trackingController.js";
 
 const router = express.Router();
 
@@ -82,6 +89,10 @@ router.delete("/resumes/:resumeId", authenticateToken, deleteResumeController);
 router.post("/accounts", authenticateToken, connectAccountController);
 router.get("/accounts", authenticateToken, getAccountsController);
 router.delete("/accounts/:accountId", authenticateToken, deleteAccountController);
+router.get("/accounts/google/auth", authenticateToken, googleAuthUrlController);
+router.get("/accounts/google/callback", googleAuthCallbackController);
+router.get("/accounts/microsoft/auth", authenticateToken, microsoftAuthUrlController);
+router.get("/accounts/microsoft/callback", microsoftAuthCallbackController);
 
 // Templates
 router.post("/templates", authenticateToken, createTemplateController);
@@ -92,7 +103,12 @@ router.delete("/templates/:templateId", authenticateToken, deleteTemplateControl
 // Campaigns
 router.post("/campaigns", authenticateToken, createCampaignController);
 router.get("/campaigns", authenticateToken, getCampaignsController);
+router.get("/campaigns/:id", authenticateToken, getCampaignController);
 router.put("/campaigns/:campaignId/status", authenticateToken, updateCampaignStatusController);
+router.post("/campaigns/:campaignId/resend", authenticateToken, resendCampaignController);
 router.delete("/campaigns/:campaignId", authenticateToken, deleteCampaignController);
+
+// Tracking Routes (No auth required, accessible from emails)
+router.get("/track/open", trackOpenController);
 
 export default router;
