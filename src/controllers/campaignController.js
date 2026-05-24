@@ -95,6 +95,12 @@ export const updateCampaignStatusController = async (req, res) => {
       history: FieldValue.arrayUnion({ action: `Status changed to ${status}`, timestamp: new Date().toISOString() })
     });
     
+    // If the campaign is being resumed, start the background process
+    if (status === 'Active') {
+      processCampaign(userId, campaignId)
+        .catch(err => console.error("Background processing failed on resume:", err));
+    }
+    
     res.status(200).json({ success: true, id: campaignId, status });
   } catch (error) {
     console.error('[Campaign] Update status error:', error);
@@ -125,6 +131,7 @@ export const resendCampaignController = async (req, res) => {
     }
     const userId = req.user.uid;
     const { campaignId } = req.params;
+    const { accountId } = req.body || {};
 
     const campaignRef = db.collection('users').doc(userId).collection('campaigns').doc(campaignId);
     
@@ -133,12 +140,22 @@ export const resendCampaignController = async (req, res) => {
       return res.status(404).json({ error: 'Campaign not found' });
     }
 
-    await campaignRef.update({
+    const updates = {
       status: 'Active',
       sent: 0,
       updatedAt: new Date().toISOString(),
       history: FieldValue.arrayUnion({ action: 'Resent Campaign', timestamp: new Date().toISOString() })
-    });
+    };
+
+    if (accountId) {
+      const accountDoc = await db.collection('users').doc(userId).collection('accounts').doc(accountId).get();
+      if (!accountDoc.exists) {
+        return res.status(400).json({ error: 'Provided account not found' });
+      }
+      updates.accountId = accountId;
+    }
+
+    await campaignRef.update(updates);
     
     // Fire-and-forget: start sending emails in the background
     processCampaign(userId, campaignId).catch(err => {

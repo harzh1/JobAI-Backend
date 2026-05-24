@@ -78,8 +78,8 @@ export const sendEmailViaGmail = async (userId, accountId, to, subject, htmlBody
       messageParts = [
         `From: ${account.name || account.email} <${account.email}>`,
         `To: ${to}`,
-        'Content-Type: text/html; charset=utf-8',
         'MIME-Version: 1.0',
+        'Content-Type: text/html; charset=utf-8',
         `Subject: ${utf8Subject}`,
         '',
         htmlBody
@@ -87,12 +87,8 @@ export const sendEmailViaGmail = async (userId, accountId, to, subject, htmlBody
     }
     const message = messageParts.join('\r\n');
 
-    // The body needs to be base64url encoded
-    const encodedMessage = Buffer.from(message)
-      .toString('base64')
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/, '');
+    // The body needs to be base64url encoded. Node 14+ supports base64url directly.
+    const encodedMessage = Buffer.from(message).toString('base64url');
 
     const res = await gmail.users.messages.send({
       userId: 'me',
@@ -108,7 +104,13 @@ export const sendEmailViaGmail = async (userId, accountId, to, subject, htmlBody
 
     return { success: true, messageId: res.data.id };
   } catch (error) {
-    console.error('[EmailService] Failed to send email via Gmail API:', error);
+    if (error.response && error.response.data) {
+      const apiError = error.response.data;
+      const details = apiError.error_description || (apiError.error && apiError.error.message) || JSON.stringify(apiError);
+      console.error('[EmailService] Gmail API Error:', details);
+      throw new Error(`Gmail Error: ${details}`);
+    }
+    console.error('[EmailService] Gmail send error:', error.message);
     throw error;
   }
 };

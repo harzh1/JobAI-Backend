@@ -89,15 +89,46 @@ export const processCampaign = async (userId, campaignId) => {
       }
     }
 
-    let sentCount = 0;
+    // Determine the starting index — skip recipients already sent in previous runs
+    const previouslySent = campaign.sent || 0;
+    const recipientsToProcess = recipients.slice(previouslySent);
+
+    let sentThisRun = 0;
+    let totalSent = previouslySent;
     let failedCount = 0;
     const dailyLimit = campaign.dailyLimit || 50;
     const errors = [];
 
-    for (const recipient of recipients) {
-      if (sentCount >= dailyLimit) {
+    console.log(`[CampaignSender] Campaign ${campaignId}: ${recipientsToProcess.length} recipients remaining (${previouslySent} previously sent)`);
+
+    if (recipientsToProcess.length === 0) {
+      console.log(`[CampaignSender] All recipients already sent, marking Completed.`);
+      await campaignRef.update({
+        status: 'Completed',
+        currentRecipient: null,
+        updatedAt: new Date().toISOString(),
+        history: FieldValue.arrayUnion({ action: 'Campaign Completed', timestamp: new Date().toISOString() })
+      });
+      return;
+    }
+
+    let stoppedByUser = false;
+
+    for (const recipient of recipientsToProcess) {
+      if (sentThisRun >= dailyLimit) {
         console.log(`[CampaignSender] Daily limit of ${dailyLimit} reached, pausing.`);
         break;
+      }
+
+      // Check the latest status from Firestore to allow stopping/pausing mid-campaign
+      const currentCampDoc = await campaignRef.get();
+      if (currentCampDoc.exists) {
+        const currentStatus = currentCampDoc.data().status;
+        if (currentStatus !== 'Active') {
+          console.log(`[CampaignSender] Campaign ${campaignId} is now ${currentStatus}, aborting loop.`);
+          stoppedByUser = true;
+          break;
+        }
       }
 
       await campaignRef.update({ currentRecipient: recipient.email, updatedAt: new Date().toISOString() });
@@ -127,11 +158,12 @@ export const processCampaign = async (userId, campaignId) => {
           continue;
         }
 
-        sentCount++;
+        sentThisRun++;
+        totalSent++;
 
         // Update progress in Firestore
         await campaignRef.update({
-          sent: sentCount,
+          sent: totalSent,
           updatedAt: new Date().toISOString()
         });
 
@@ -139,28 +171,51 @@ export const processCampaign = async (userId, campaignId) => {
         await delay(2000 + Math.random() * 3000);
 
       } catch (emailError) {
-        console.error(`[CampaignSender] Failed to send to ${recipient.email}:`, emailError.message);
+        console.error(`[CampaignSender] FULL ERROR for ${recipient.email}:`, emailError);
+        console.error(`[CampaignSender] Error Stack:`, emailError.stack);
         failedCount++;
-        errors.push({ email: recipient.email, error: emailError.message });
+        errors.push({ email: recipient.email, error: emailError.message || 'Unknown error' });
       }
     }
 
     // Determine final status
-    const allSent = sentCount >= recipients.length;
-    const finalStatus = allSent ? 'Completed' : (sentCount > 0 ? 'Active' : 'Failed');
+    // - If user stopped/paused, don't override their status
+    // - If all recipients sent, mark Completed
+    // - If daily limit reached but more to send, mark Paused (no auto-scheduler)
+    // - If nothing sent at all, mark Failed
+    let finalStatus;
+    if (stoppedByUser) {
+      // User already set the status (Paused/Stopped), don't override
+      finalStatus = null;
+    } else if (totalSent >= recipients.length) {
+      finalStatus = 'Completed';
+    } else if (sentThisRun >= dailyLimit && totalSent < recipients.length) {
+      finalStatus = 'Paused';
+    } else if (totalSent === 0 && failedCount > 0) {
+      finalStatus = 'Failed';
+    } else {
+      finalStatus = 'Completed';
+    }
 
-    await campaignRef.update({
-      sent: sentCount,
-      status: finalStatus,
+    const updateData = {
+      sent: totalSent,
       currentRecipient: null,
       ...(errors.length > 0 && { errors: errors.slice(0, 10) }),
       updatedAt: new Date().toISOString(),
-      ...(finalStatus === 'Completed' && {
-        history: FieldValue.arrayUnion({ action: 'Campaign Completed', timestamp: new Date().toISOString() })
-      })
-    });
+    };
 
-    console.log(`[CampaignSender] Campaign ${campaignId} processed: ${sentCount} sent, ${failedCount} failed`);
+    if (finalStatus) {
+      updateData.status = finalStatus;
+      if (finalStatus === 'Completed') {
+        updateData.history = FieldValue.arrayUnion({ action: 'Campaign Completed', timestamp: new Date().toISOString() });
+      } else if (finalStatus === 'Paused') {
+        updateData.history = FieldValue.arrayUnion({ action: `Paused: Daily limit (${dailyLimit}) reached. ${totalSent}/${recipients.length} sent.`, timestamp: new Date().toISOString() });
+      }
+    }
+
+    await campaignRef.update(updateData);
+
+    console.log(`[CampaignSender] Campaign ${campaignId} processed: ${sentThisRun} sent this run (${totalSent} total), ${failedCount} failed`);
 
   } catch (error) {
     console.error(`[CampaignSender] Fatal error processing campaign ${campaignId}:`, error);
