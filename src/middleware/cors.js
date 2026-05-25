@@ -1,7 +1,13 @@
 /**
  * CORS configuration for development and production
  */
-const normalizeOrigin = (origin = "") => origin.trim().replace(/\/+$/, "");
+const normalizeOrigin = (origin = "") => {
+  try {
+    return new URL(origin).origin;
+  } catch (e) {
+    return origin.trim().replace(/\/+$/, "");
+  }
+};
 
 const getConfiguredOrigins = () => {
   const configuredOrigins = [
