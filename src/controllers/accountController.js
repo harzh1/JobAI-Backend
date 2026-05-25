@@ -5,10 +5,11 @@ import axios from 'axios';
 const MICROSOFT_REDIRECT_URI = 'http://localhost:5000/api/accounts/microsoft/callback';
 
 const getOAuth2Client = () => {
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/api/accounts/google/callback';
   return new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
-    'http://localhost:5000/api/accounts/google/callback'
+    redirectUri
   );
 };
 
@@ -161,7 +162,8 @@ export const googleAuthCallbackController = async (req, res) => {
     
     await accountsRef.add(newAccount);
     
-    res.redirect('http://localhost:5173/dashboard?view=campaigns');
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173/campaigns?tab=accounts';
+    res.redirect(frontendUrl);
   } catch (error) {
     console.error('[Account] Error in google auth callback', error);
     res.status(500).send('Authentication failed');
@@ -221,7 +223,8 @@ export const microsoftAuthCallbackController = async (req, res) => {
     
     await accountsRef.add(newAccount);
     
-    res.redirect('http://localhost:5173/dashboard?view=campaigns');
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173/campaigns?tab=accounts';
+    res.redirect(frontendUrl);
   } catch (error) {
     console.error('[Account] Error in microsoft auth callback', error.response?.data || error.message);
     res.status(500).send('Authentication failed');
