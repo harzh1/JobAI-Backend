@@ -2,7 +2,7 @@ import { db } from '../config/firebase.js';
 import { google } from 'googleapis';
 import axios from 'axios';
 
-const MICROSOFT_REDIRECT_URI = 'http://localhost:5000/api/accounts/microsoft/callback';
+const MICROSOFT_REDIRECT_URI = process.env.MICROSOFT_REDIRECT_URI || 'http://localhost:5000/api/accounts/microsoft/callback';
 
 const getOAuth2Client = () => {
   const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/api/accounts/google/callback';
